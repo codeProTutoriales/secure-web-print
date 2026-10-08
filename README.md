@@ -1,4 +1,4 @@
-# Universal POS Printer & Secure Web Print 🖨️🔒
+# Secure Web Print 🖨️🔒
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
@@ -9,7 +9,7 @@
 <a name="español"></a>
 ## 🇪🇸 Español
 
-**Universal POS Printer** es un agente local y SDK de alta seguridad que actúa como puente definitivo entre las Aplicaciones Web modernas (React, Angular, Vue, Svelte, .NET Blazor) e impresoras físicas (térmicas de punto de venta, láser o de red) a través de entornos **Windows, macOS y Linux**.
+**Secure Web Print** es un agente local y SDK de alta seguridad que actúa como puente definitivo entre las Aplicaciones Web modernas (React, Angular, Vue, Svelte, .NET Blazor) e impresoras físicas (térmicas de punto de venta, láser o de red) a través de entornos **Windows, macOS y Linux**.
 
 ### 🚨 El Problema (Caja Negra del Navegador)
 En el desarrollo web moderno, la API de impresión nativa (`window.print()`) es una caja negra aislada. Por razones estrictas de privacidad, los navegadores bloquean intencionalmente cualquier intento del desarrollador web de saber si un usuario realmente hizo clic en "Imprimir", si hizo clic en "Cancelar" o qué impresora seleccionó.
@@ -29,7 +29,7 @@ El Agente intercepta el trabajo físico de bajo nivel en el milisegundo exacto e
 - **Resultados Determinísticos Garantizados:** Devuelve de forma matemática los estados `PRINTED` o `CANCELLED` a la web a través de WebSockets.
 - **Destrucción de Impresoras Falsas:** Al llamar al SDK, defines una "Lista Blanca" (`["EPSON TM", "BIXOLON"]`). Si el usuario intenta imprimir a un PDF o impresora no autorizada, el agente le inyecta el comando destructor `JOB_CONTROL_CANCEL` al núcleo del sistema y aniquila el trabajo en milisegundos.
 - **Auditoría de Pausas (Limbo):** Aborta el trabajo y lanza alertas si detecta que la impresora de destino tiene flags de `PAUSED` u `OFFLINE`.
-- **Límite de Copias Dinámico:** Inspecciona la estructura binaria profunda (`pDevMode.Copies` y `TotalPages`) enviada por el navegador. Si el empleado solicita más copias de las autorizadas explícitamente en el código web (ej. `maxCopies = 1`), el trabajo se clasifica como Fraude y se reporta.
+- **Límite de Copias Dinámico:** Inspecciona la estructura binaria profunda (`pDevMode.Copies` y `TotalPages`) enviada por el navegador. Si el empleado solicita más copias de las autorizadas explícitamente en el código web (ej. `maxCopias = 1`), el trabajo se clasifica como Fraude y se reporta.
 - **Bloqueo de Interfaz CSS:** Inyecta código para inhabilitar la tecla `CTRL+P`. Si alguien intenta imprimir saltándose el sistema, la hoja saldrá totalmente en blanco.
 
 ### 🌐 Compatibilidad Total de Frontend
@@ -113,7 +113,7 @@ Simplemente enlaza el SDK de Javascript en tu `index.html` e invócalo desde C#:
 <a name="english"></a>
 ## 🇬🇧 English
 
-**Universal POS Printer** is a highly secure, local print agent and SDK that bridges the gap between modern Web Applications (React, Angular, Vue, Svelte, .NET Blazor) and physical thermal/network printers across **Windows, macOS, and Linux**. 
+**Secure Web Print** is a highly secure, local print agent and SDK that bridges the gap between modern Web Applications (React, Angular, Vue, Svelte, .NET Blazor) and physical thermal/network printers across **Windows, macOS, and Linux**. 
 
 ### 🚨 The Problem
 In web development, the native `window.print()` dialog is an isolated black box. Browsers intentionally block developers from knowing if a user clicked "Print", "Cancel", or which printer they chose. For Point of Sale (POS) systems, this is a massive security flaw. Cashiers can easily commit fraud by printing to a PDF, modifying the number of copies, or pausing the printer to trick the accounting software.
