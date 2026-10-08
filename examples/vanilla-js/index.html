@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal Printer - Vanilla JS Example</title>
+    <style>
+        body { font-family: system-ui, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; }
+        .status { padding: 10px; border-radius: 4px; margin-bottom: 20px; }
+        .connected { background-color: #d4edda; color: #155724; }
+        .disconnected { background-color: #f8d7da; color: #721c24; }
+        select, button { padding: 8px; font-size: 16px; margin: 5px 0; width: 100%; box-sizing: border-box; }
+        #logs { background: #f4f4f4; padding: 10px; border-radius: 4px; font-family: monospace; height: 150px; overflow-y: auto; }
+        
+        /* BLOQUEO ANTI-FRAUDE (Evita Ctrl+P manual) */
+        @media print {
+            body.lock-print { display: none !important; }
+        }
+    </style>
+    <script>
+        class Printer {
+            constructor(url = 'http://127.0.0.1:8765') {
+                this.url = url;
+            }
+
+            async connect() {
+                try {
+                    const res = await fetch(`${this.url}/api/health`);
+                    return res.ok;
+                } catch (e) {
+                    return false;
+                }
+            }
+
+            async printDialog(allowedPrinters = []) {
+                document.body.classList.remove('lock-print');
+
+                // Si había un temporizador previo, lo cancelamos
+                if (this.currentTimeout) {
+                    clearTimeout(this.currentTimeout);
+                }
+
+                await fetch(`${this.url}/api/monitor/start`, { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ allowedPrinters })
+                });
+
+                const afterPrintHandler = async () => {
+                    window.removeEventListener('afterprint', afterPrintHandler);
+                    document.body.classList.add('lock-print');
+
+                    this.currentTimeout = setTimeout(async () => {
+                        await fetch(`${this.url}/api/monitor/stop`, { method: 'POST' });
+                    }, 25000);
+                };
+
+                window.addEventListener('afterprint', afterPrintHandler);
+                window.print();
+            }
+
+            on(event, callback) {
+                const wsUrl = this.url.replace(/^http/, 'ws') + '/ws';
+                const socket = new WebSocket(wsUrl);
+                socket.onmessage = (e) => {
+                    const msg = JSON.parse(e.data);
+                    if (msg.event === event) {
+                        if (event === 'dialog_print_result' && this.currentTimeout) {
+                            clearTimeout(this.currentTimeout);
+                            this.currentTimeout = null;
+                        }
+                        callback(msg);
+                    }
+                };
+            }
+        }
+
+        let printer;
+        
+        function log(msg) {
+            const el = document.getElementById('logs');
+            el.innerHTML += `<div>${new Date().toLocaleTimeString()} - ${msg}</div>`;
+            el.scrollTop = el.scrollHeight;
+        }
+
+        async function init() {
+            log("Initializing...");
+            printer = new Printer('http://127.0.0.1:8765');
+            
+            printer.on('dialog_print_result', (data) => {
+                let textStatus = data.result.status;
+                if (textStatus === 'PRINTED') {
+                    textStatus = `✓ Impresión confirmada (Páginas: ${data.result.pages})`;
+                } else if (textStatus === 'CANCELLED') {
+                    textStatus = '✕ Diálogo cancelado';
+                } else if (textStatus === 'FRAUD_INVALID_PRINTER') {
+                    textStatus = `🚨 FRAUDE: Impresora no autorizada (${data.result.printer}). TRABAJO DESTRUIDO.`;
+                } else if (textStatus === 'FRAUD_PRINTER_PAUSED') {
+                    textStatus = `🚨 ALERTA: Impresora en Pausa/Offline (${data.result.printer}). TRABAJO DESTRUIDO.`;
+                } else if (textStatus === 'FRAUD_MULTIPLE_COPIES') {
+                    textStatus = `🚨 FRAUDE: Copias múltiples detectadas (Total: ${data.result.pages}).`;
+                }
+                log(`Dialog Print Result: ${textStatus}`);
+            });
+
+            const isConnected = await printer.connect();
+            
+            const statusEl = document.getElementById('status');
+            if (isConnected) {
+                statusEl.className = 'status connected';
+                statusEl.textContent = 'Agent Connected';
+            } else {
+                statusEl.className = 'status disconnected';
+                statusEl.textContent = 'Agent Disconnected. Ensure it is running on 127.0.0.1:8765';
+                log("Failed to connect");
+            }
+        }
+
+        window.printNativeDialogTest = async function() {
+            log(`Opening native print dialog (MODO A)...`);
+            try {
+                // Configuramos las impresoras permitidas (pueden ser partes del nombre).
+                const impresorasPermitidas = ["EPSON TM-T20III", "POS-80", "HP-CIGITECO"]; 
+                
+                await printer.printDialog(impresorasPermitidas);
+            } catch (e) {
+                log(`Print error: ${e.message}`);
+            }
+        }
+
+        window.onload = () => {
+            // Bloquear impresión al cargar
+            document.body.classList.add('lock-print');
+            init();
+        };
+    </script>
+</head>
+<body class="lock-print">
+    <h1>Universal Printer Demo</h1>
+    <div id="status" class="status disconnected">Checking connection...</div>
+    
+    <button onclick="printNativeDialogTest()" style="background-color: #28a745; color: white; padding: 15px; font-size: 16px; width: 100%; border: none; border-radius: 5px; cursor: pointer;">MODO A: Imprimir con Diálogo Nativo</button>
+
+    <h3>Event Logs</h3>
+    <div id="logs"></div>
+</body>
+</html>
